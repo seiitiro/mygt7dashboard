@@ -107,6 +107,8 @@ def update_header_line(div: Div, last_lap: Lap, reference_lap: Lap):
     div.text = f"<p><b>Last Lap: {last_lap.title} ({last_lap.car_name()})<b></p>" \
                f"<p><b>Reference Lap: {reference_lap.title} ({reference_lap.car_name()})<b></p>"
 
+my_new_race = True
+
 def update_lap_change():
     """
     Is called whenever a lap changes.
@@ -118,6 +120,7 @@ def update_lap_change():
     global g_connection_status_stored
     global g_telemetry_update_needed
     global g_reference_lap_selected
+    global my_new_race
 
     update_start_time = time.time()
 
@@ -169,6 +172,26 @@ def update_lap_change():
     start_time = time.time()
     update_race_lines(laps, reference_lap)
     logger.debug("Updating race lines took %dms" % ((time.time() - start_time) * 1000))
+
+    ### My code to automatically save laps
+    if len(laps) > 0:
+        if laps[0].number == laps[0].total_laps:
+            # If completed last lap in the race, save the json and reset
+            #PENDING fix save json again when refreshing the web page
+            if my_new_race:
+                path = save_laps_to_json(laps)
+                #path = save_laps_to_json(g_laps_stored)
+                logger.info(f"Automatically saved {len(laps)} laps to {path}")
+                #Race is saved, so not new
+                my_new_race = False
+                logger.info("reset button clicked")
+                race_diagram.delete_all_additional_laps()
+                app.gt7comm.load_laps([], replace_other_laps=True)
+                app.gt7comm.reset()
+
+        elif laps[0].total_laps == 0:
+            #This is TT, 
+            logger.info(">>>>>>>>>>>>>>>>>>>>>>>> HOW TO SAVE TT LAPS??? <<<<<<<<<<<<<<<<<<<<<<<<<")
 
     logger.debug("End of updating laps, whole Update took %dms" % ((time.time() - update_start_time) * 1000))
 
